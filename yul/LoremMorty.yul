@@ -73,6 +73,14 @@ object "LoremMorty" {
       // YOUR CODE GOES HERE
       // you'll probably want to learn about `data` in Yul: https://docs.soliditylang.org/en/v0.8.17/yul.html#datasize-dataoffset-datacopy
 
+      if gt(callvalue(), 0) {
+        revert(0, 0)
+      }
+
+      datacopy(0x0, dataoffset("textReturn"), datasize("textReturn"))
+      return(0x0, datasize("textReturn"))
     }
+
+    data "textReturn" "You're growing up fast, Morty. You're going into a great big thorn straight into my ass. Nice one, Ms Pancakes. That guy is the Red Grin Grumbold of pretending he knows what's going on. Oh you agree huh? You like that Red Grin Grumbold reference? Well guess what, I made him up. You really are your father's children. Think for yourselves, don't be sheep. Meeseeks were not born into this world fumbling for meaning, Jerry!"
   }
 }

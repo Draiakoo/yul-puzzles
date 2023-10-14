@@ -48,6 +48,8 @@ object "Counter" {
   code {
     // YOUR CUSTOM CONSTRUCTOR LOGIC GOES HERE
 
+    sstore(0, caller())   // store msg.sender at slot 0
+
     // copy all runtime code to memory
     datacopy(0, dataoffset("Runtime"), datasize("Runtime"))
 
@@ -58,6 +60,70 @@ object "Counter" {
     code {
       // YOUR CODE GOES HERE
 
+      if gt(callvalue(), 0) {
+        revert(0, 0)
+      }
+
+      switch getSelector()          
+      case 0xe8927fbc{            // increase() selector
+        // cache the slot 0
+        let slot0 := sload(0)
+        let counter := add(getCounter(slot0), 1)
+        sstore(0, or(shr(160, counter), getOwner(slot0)))
+      }
+      case 0x9732187d{            // decrease(uint64 amount) selector
+        // check if the calldata size is correct. must contain 4 bytes (selector) + 32 bytes (argument, even though it is 8 bytes)
+        if lt(calldatasize(), 36) {
+          revert(0, 0)
+        }
+
+        let amountToDecrease := calldataload(0x04)
+
+        // check if the argument is greater than uint64
+        if gt(amountToDecrease, 0xffffffffffffffff) {
+          revert(0, 0)
+        }
+
+        let slot0 := sload(0)
+        // check if sender is the owner, if not revert
+        if iszero(eq(getOwner(slot0), caller())) { revert(0, 0) }
+        let counter := getCounter(slot0)
+
+        // check for substraction underflow
+        if gt(amountToDecrease, counter){
+          revert(0, 0)
+        }
+
+        counter := sub(counter, amountToDecrease)
+
+        sstore(0, or(shr(counter, 160), getOwner(slot0)))
+      }
+      case 0x61bc221a{            // counter() selector
+        let counter := getCounter(sload(0))
+        mstore(0x0, counter)
+        return(0x0, 12)
+      }
+      case 0x8da5cb5b{            // owner() selector
+        let owner := getOwner(sload(0))
+        mstore(0, owner)
+        return(0, 0x20)
+      }
+      default {
+        revert(0, 0)
+      }
+      
+
+      function getSelector() -> selector {
+        selector := shr(224, calldataload(0))
+      }
+
+      function getOwner(content) -> owner {
+        owner := shl(96, shr(96, content))
+      }
+
+      function getCounter(content) -> counter {
+        counter := shl(160, content)
+      }
     }
   }
 }
